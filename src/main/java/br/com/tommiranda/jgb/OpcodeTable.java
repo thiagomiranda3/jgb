@@ -5,10 +5,10 @@ import java.util.Map;
 
 public class OpcodeTable {
 
-    private Map<Integer, Opcode> table = createTable();
-    private Map<Integer, Opcode> cbTable = createCBTable();
+    public static Map<Integer, Opcode> table = createTable();
+    public static Map<Integer, Opcode> cbTable = createCBTable();
 
-    private Map<Integer, Opcode> createTable() {
+    private static Map<Integer, Opcode> createTable() {
         Map<Integer, Opcode> table = new HashMap<>();
 
         table.put(0x00, new Opcode(0x00, "NOP", 1));
@@ -271,9 +271,9 @@ public class OpcodeTable {
         return table;
     }
 
-    private Map<Integer, Opcode> createCBTable() {
+    private static Map<Integer, Opcode> createCBTable() {
         Map<Integer, Opcode> table = new HashMap<>();
-        
+
         table.put(0x00, new Opcode(0x00, "RLC B", 2));
         table.put(0x01, new Opcode(0x01, "RLC C", 2));
         table.put(0x02, new Opcode(0x02, "RLC D", 2));
