@@ -20,7 +20,10 @@ public class Main {
         while (pc < uRom.length) {
             Opcode opcode = OpcodeTable.table.get(uRom[pc++]);
 
-            if (opcode.getLength() == 1) {
+            if(opcode.getOp() == 0xCB) {
+                opcode = OpcodeTable.cbTable.get(uRom[pc++]);
+                System.out.println(opcode.getLabel());
+            } else if (opcode.getLength() == 1) {
                 System.out.println(opcode.getLabel());
             } else if (opcode.getLength() == 2) {
                 int data = uRom[pc++];
@@ -29,7 +32,7 @@ public class Main {
                                      .replace("u8", "")
                                      .replace("i8", "");
 
-                String hexData = StringUtils.leftPad(Integer.toHexString(data).toUpperCase(), 4, "0");
+                String hexData = "$" + StringUtils.leftPad(Integer.toHexString(data), 4, "0");
 
                 System.out.println(label + hexData);
             } else if(opcode.getLength() == 3) {
