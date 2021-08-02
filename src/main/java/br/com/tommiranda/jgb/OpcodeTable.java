@@ -2,65 +2,95 @@ package br.com.tommiranda.jgb;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class OpcodeTable {
 
-    public static Map<Integer, Opcode> table = createTable();
     public static Map<Integer, Opcode> cbTable = createCBTable();
+    private static CPU cpu = GameBoy.cpu;
+    private static Bus bus = GameBoy.bus;
+    public static Map<Integer, Opcode> table = createTable();
 
     private static Map<Integer, Opcode> createTable() {
         Map<Integer, Opcode> table = new HashMap<>();
 
-        table.put(0x00, new Opcode(0x00, "NOP", 1));
-        table.put(0x01, new Opcode(0x01, "LD BC,u16", 3));
-        table.put(0x02, new Opcode(0x02, "LD (BC),A", 1));
+        AtomicInteger lsb = new AtomicInteger();
+        AtomicInteger msb = new AtomicInteger();
+
+        table.put(0x00, new Opcode(0x00, "NOP", 1, new Runnable[]{}));
+        table.put(0x01, new Opcode(0x01, "LD BC,u16", 3, new Runnable[]{
+                () -> lsb.set(bus.readByte(cpu.getPCInc())),
+                () -> {
+                    msb.set(bus.readByte(cpu.getPCInc()));
+                    cpu.setBC(ByteUtils.to16Bit(msb.get(), lsb.get()));
+                }
+        }));
+        table.put(0x02, new Opcode(0x02, "LD (BC),A", 1, new Runnable[]{() -> bus.writeByte(cpu.getBC(), cpu.getA())}));
         table.put(0x03, new Opcode(0x03, "INC BC", 1));
-        table.put(0x04, new Opcode(0x04, "INC B", 1));
-        table.put(0x05, new Opcode(0x05, "DEC B", 1));
-        table.put(0x06, new Opcode(0x06, "LD B,u8", 2));
+        table.put(0x04, new Opcode(0x04, "INC B", 1, new Runnable[]{() -> cpu.setB(INC(cpu.getB()))}));
+        table.put(0x05, new Opcode(0x05, "DEC B", 1, new Runnable[]{() -> cpu.setB(DEC(cpu.getB()))}));
+        table.put(0x06, new Opcode(0x06, "LD B,u8", 2, new Runnable[]{() -> cpu.setB(bus.readByte(cpu.getPCInc()))}));
         table.put(0x07, new Opcode(0x07, "RLCA", 1));
         table.put(0x08, new Opcode(0x08, "LD (u16),SP", 3));
         table.put(0x09, new Opcode(0x09, "ADD HL,BC", 1));
         table.put(0x0A, new Opcode(0x0A, "LD A,(BC)", 1));
         table.put(0x0B, new Opcode(0x0B, "DEC BC", 1));
-        table.put(0x0C, new Opcode(0x0C, "INC C", 1));
-        table.put(0x0D, new Opcode(0x0D, "DEC C", 1));
-        table.put(0x0E, new Opcode(0x0E, "LD C,u8", 2));
+        table.put(0x0C, new Opcode(0x0C, "INC C", 1, new Runnable[]{() -> cpu.setC(INC(cpu.getC()))}));
+        table.put(0x0D, new Opcode(0x0D, "DEC C", 1, new Runnable[]{() -> cpu.setB(DEC(cpu.getC()))}));
+        table.put(0x0E, new Opcode(0x0E, "LD C,u8", 2, new Runnable[]{() -> cpu.setC(bus.readByte(cpu.getPCInc()))}));
         table.put(0x0F, new Opcode(0x0F, "RRCA", 1));
-        table.put(0x10, new Opcode(0x10, "STOP", 2));
-        table.put(0x11, new Opcode(0x11, "LD DE,u16", 3));
-        table.put(0x12, new Opcode(0x12, "LD (DE),A", 1));
+        table.put(0x10, new Opcode(0x10, "STOP", 2, new Runnable[]{}));
+        table.put(0x11, new Opcode(0x11, "LD DE,u16", 3, new Runnable[]{
+                () -> lsb.set(bus.readByte(cpu.getPCInc())),
+                () -> {
+                    msb.set(bus.readByte(cpu.getPCInc()));
+                    cpu.setDE(ByteUtils.to16Bit(msb.get(), lsb.get()));
+                }
+        }));
+        table.put(0x12, new Opcode(0x12, "LD (DE),A", 1, new Runnable[]{() -> bus.writeByte(cpu.getDE(), cpu.getA())}));
         table.put(0x13, new Opcode(0x13, "INC DE", 1));
-        table.put(0x14, new Opcode(0x14, "INC D", 1));
+        table.put(0x14, new Opcode(0x14, "INC D", 1, new Runnable[]{() -> cpu.setD(INC(cpu.getD()))}));
         table.put(0x15, new Opcode(0x15, "DEC D", 1));
-        table.put(0x16, new Opcode(0x16, "LD D,u8", 2));
+        table.put(0x16, new Opcode(0x16, "LD D,u8", 2, new Runnable[]{() -> cpu.setD(bus.readByte(cpu.getPCInc()))}));
         table.put(0x17, new Opcode(0x17, "RLA", 1));
         table.put(0x18, new Opcode(0x18, "JR i8", 2));
         table.put(0x19, new Opcode(0x19, "ADD HL,DE", 1));
         table.put(0x1A, new Opcode(0x1A, "LD A,(DE)", 1));
         table.put(0x1B, new Opcode(0x1B, "DEC DE", 1));
-        table.put(0x1C, new Opcode(0x1C, "INC E", 1));
-        table.put(0x1D, new Opcode(0x1D, "DEC E", 1));
-        table.put(0x1E, new Opcode(0x1E, "LD E,u8", 2));
+        table.put(0x1C, new Opcode(0x1C, "INC E", 1, new Runnable[]{() -> cpu.setE(INC(cpu.getE()))}));
+        table.put(0x1D, new Opcode(0x1D, "DEC E", 1, new Runnable[]{() -> cpu.setB(DEC(cpu.getE()))}));
+        table.put(0x1E, new Opcode(0x1E, "LD E,u8", 2, new Runnable[]{() -> cpu.setE(bus.readByte(cpu.getPCInc()))}));
         table.put(0x1F, new Opcode(0x1F, "RRA", 1));
         table.put(0x20, new Opcode(0x20, "JR NZ,i8", 2));
-        table.put(0x21, new Opcode(0x21, "LD HL,u16", 3));
+        table.put(0x21, new Opcode(0x21, "LD HL,u16", 3, new Runnable[]{
+                () -> lsb.set(bus.readByte(cpu.getPCInc())),
+                () -> {
+                    msb.set(bus.readByte(cpu.getPCInc()));
+                    cpu.setHL(ByteUtils.to16Bit(msb.get(), lsb.get()));
+                }
+        }));
         table.put(0x22, new Opcode(0x22, "LD (HL+),A", 1));
         table.put(0x23, new Opcode(0x23, "INC HL", 1));
-        table.put(0x24, new Opcode(0x24, "INC H", 1));
-        table.put(0x25, new Opcode(0x25, "DEC H", 1));
-        table.put(0x26, new Opcode(0x26, "LD H,u8", 2));
+        table.put(0x24, new Opcode(0x24, "INC H", 1, new Runnable[]{() -> cpu.setH(INC(cpu.getH()))}));
+        table.put(0x25, new Opcode(0x25, "DEC H", 1, new Runnable[]{() -> cpu.setB(DEC(cpu.getH()))}));
+        table.put(0x26, new Opcode(0x26, "LD H,u8", 2, new Runnable[]{() -> cpu.setH(bus.readByte(cpu.getPCInc()))}));
         table.put(0x27, new Opcode(0x27, "DAA", 1));
         table.put(0x28, new Opcode(0x28, "JR Z,i8", 2));
         table.put(0x29, new Opcode(0x29, "ADD HL,HL", 1));
         table.put(0x2A, new Opcode(0x2A, "LD A,(HL+)", 1));
         table.put(0x2B, new Opcode(0x2B, "DEC HL", 1));
-        table.put(0x2C, new Opcode(0x2C, "INC L", 1));
-        table.put(0x2D, new Opcode(0x2D, "DEC L", 1));
-        table.put(0x2E, new Opcode(0x2E, "LD L,u8", 2));
+        table.put(0x2C, new Opcode(0x2C, "INC L", 1, new Runnable[]{() -> cpu.setL(INC(cpu.getL()))}));
+        table.put(0x2D, new Opcode(0x2D, "DEC L", 1, new Runnable[]{() -> cpu.setB(DEC(cpu.getL()))}));
+        table.put(0x2E, new Opcode(0x2E, "LD L,u8", 2, new Runnable[]{() -> cpu.setL(bus.readByte(cpu.getPCInc()))}));
         table.put(0x2F, new Opcode(0x2F, "CPL", 1));
         table.put(0x30, new Opcode(0x30, "JR NC,i8", 2));
-        table.put(0x31, new Opcode(0x31, "LD SP,u16", 3));
+        table.put(0x31, new Opcode(0x31, "LD SP,u16", 3, new Runnable[]{
+                () -> lsb.set(bus.readByte(cpu.getPCInc())),
+                () -> {
+                    msb.set(bus.readByte(cpu.getPCInc()));
+                    cpu.setSP(ByteUtils.to16Bit(msb.get(), lsb.get()));
+                }
+        }));
         table.put(0x32, new Opcode(0x32, "LD (HL-),A", 1));
         table.put(0x33, new Opcode(0x33, "INC SP", 1));
         table.put(0x34, new Opcode(0x34, "INC (HL)", 1));
@@ -71,201 +101,201 @@ public class OpcodeTable {
         table.put(0x39, new Opcode(0x39, "ADD HL,SP", 1));
         table.put(0x3A, new Opcode(0x3A, "LD A,(HL-)", 1));
         table.put(0x3B, new Opcode(0x3B, "DEC SP", 1));
-        table.put(0x3C, new Opcode(0x3C, "INC A", 1));
-        table.put(0x3D, new Opcode(0x3D, "DEC A", 1));
-        table.put(0x3E, new Opcode(0x3E, "LD A,u8", 2));
+        table.put(0x3C, new Opcode(0x3C, "INC A", 1, new Runnable[]{() -> cpu.setA(INC(cpu.getA()))}));
+        table.put(0x3D, new Opcode(0x3D, "DEC A", 1, new Runnable[]{() -> cpu.setB(DEC(cpu.getA()))}));
+        table.put(0x3E, new Opcode(0x3E, "LD A,u8", 2, new Runnable[]{() -> cpu.setA(bus.readByte(cpu.getPCInc()))}));
         table.put(0x3F, new Opcode(0x3F, "CCF", 1));
-        table.put(0x40, new Opcode(0x40, "LD B,B", 1));
-        table.put(0x41, new Opcode(0x41, "LD B,C", 1));
-        table.put(0x42, new Opcode(0x42, "LD B,D", 1));
-        table.put(0x43, new Opcode(0x43, "LD B,E", 1));
-        table.put(0x44, new Opcode(0x44, "LD B,H", 1));
-        table.put(0x45, new Opcode(0x45, "LD B,L", 1));
-        table.put(0x46, new Opcode(0x46, "LD B,(HL)", 1));
-        table.put(0x47, new Opcode(0x47, "LD B,A", 1));
-        table.put(0x48, new Opcode(0x48, "LD C,B", 1));
-        table.put(0x49, new Opcode(0x49, "LD C,C", 1));
-        table.put(0x4A, new Opcode(0x4A, "LD C,D", 1));
-        table.put(0x4B, new Opcode(0x4B, "LD C,E", 1));
-        table.put(0x4C, new Opcode(0x4C, "LD C,H", 1));
-        table.put(0x4D, new Opcode(0x4D, "LD C,L", 1));
-        table.put(0x4E, new Opcode(0x4E, "LD C,(HL)", 1));
-        table.put(0x4F, new Opcode(0x4F, "LD C,A", 1));
-        table.put(0x50, new Opcode(0x50, "LD D,B", 1));
-        table.put(0x51, new Opcode(0x51, "LD D,C", 1));
-        table.put(0x52, new Opcode(0x52, "LD D,D", 1));
-        table.put(0x53, new Opcode(0x53, "LD D,E", 1));
-        table.put(0x54, new Opcode(0x54, "LD D,H", 1));
-        table.put(0x55, new Opcode(0x55, "LD D,L", 1));
-        table.put(0x56, new Opcode(0x56, "LD D,(HL)", 1));
-        table.put(0x57, new Opcode(0x57, "LD D,A", 1));
-        table.put(0x58, new Opcode(0x58, "LD E,B", 1));
-        table.put(0x59, new Opcode(0x59, "LD E,C", 1));
-        table.put(0x5A, new Opcode(0x5A, "LD E,D", 1));
-        table.put(0x5B, new Opcode(0x5B, "LD E,E", 1));
-        table.put(0x5C, new Opcode(0x5C, "LD E,H", 1));
-        table.put(0x5D, new Opcode(0x5D, "LD E,L", 1));
-        table.put(0x5E, new Opcode(0x5E, "LD E,(HL)", 1));
-        table.put(0x5F, new Opcode(0x5F, "LD E,A", 1));
-        table.put(0x60, new Opcode(0x60, "LD H,B", 1));
-        table.put(0x61, new Opcode(0x61, "LD H,C", 1));
-        table.put(0x62, new Opcode(0x62, "LD H,D", 1));
-        table.put(0x63, new Opcode(0x63, "LD H,E", 1));
-        table.put(0x64, new Opcode(0x64, "LD H,H", 1));
-        table.put(0x65, new Opcode(0x65, "LD H,L", 1));
-        table.put(0x66, new Opcode(0x66, "LD H,(HL)", 1));
-        table.put(0x67, new Opcode(0x67, "LD H,A", 1));
-        table.put(0x68, new Opcode(0x68, "LD L,B", 1));
-        table.put(0x69, new Opcode(0x69, "LD L,C", 1));
-        table.put(0x6A, new Opcode(0x6A, "LD L,D", 1));
-        table.put(0x6B, new Opcode(0x6B, "LD L,E", 1));
-        table.put(0x6C, new Opcode(0x6C, "LD L,H", 1));
-        table.put(0x6D, new Opcode(0x6D, "LD L,L", 1));
-        table.put(0x6E, new Opcode(0x6E, "LD L,(HL)", 1));
-        table.put(0x6F, new Opcode(0x6F, "LD L,A", 1));
-        table.put(0x70, new Opcode(0x70, "LD (HL),B", 1));
-        table.put(0x71, new Opcode(0x71, "LD (HL),C", 1));
-        table.put(0x72, new Opcode(0x72, "LD (HL),D", 1));
-        table.put(0x73, new Opcode(0x73, "LD (HL),E", 1));
-        table.put(0x74, new Opcode(0x74, "LD (HL),H", 1));
-        table.put(0x75, new Opcode(0x75, "LD (HL),L", 1));
-        table.put(0x76, new Opcode(0x76, "HALT", 1));
-        table.put(0x77, new Opcode(0x77, "LD (HL),A", 1));
-        table.put(0x78, new Opcode(0x78, "LD A,B", 1));
-        table.put(0x79, new Opcode(0x79, "LD A,C", 1));
-        table.put(0x7A, new Opcode(0x7A, "LD A,D", 1));
-        table.put(0x7B, new Opcode(0x7B, "LD A,E", 1));
-        table.put(0x7C, new Opcode(0x7C, "LD A,H", 1));
-        table.put(0x7D, new Opcode(0x7D, "LD A,L", 1));
-        table.put(0x7E, new Opcode(0x7E, "LD A,(HL)", 1));
-        table.put(0x7F, new Opcode(0x7F, "LD A,A", 1));
-        table.put(0x80, new Opcode(0x80, "ADD A,B", 1));
-        table.put(0x81, new Opcode(0x81, "ADD A,C", 1));
-        table.put(0x82, new Opcode(0x82, "ADD A,D", 1));
-        table.put(0x83, new Opcode(0x83, "ADD A,E", 1));
-        table.put(0x84, new Opcode(0x84, "ADD A,H", 1));
-        table.put(0x85, new Opcode(0x85, "ADD A,L", 1));
-        table.put(0x86, new Opcode(0x86, "ADD A,(HL)", 1));
-        table.put(0x87, new Opcode(0x87, "ADD A,A", 1));
-        table.put(0x88, new Opcode(0x88, "ADC A,B", 1));
-        table.put(0x89, new Opcode(0x89, "ADC A,C", 1));
-        table.put(0x8A, new Opcode(0x8A, "ADC A,D", 1));
-        table.put(0x8B, new Opcode(0x8B, "ADC A,E", 1));
-        table.put(0x8C, new Opcode(0x8C, "ADC A,H", 1));
-        table.put(0x8D, new Opcode(0x8D, "ADC A,L", 1));
-        table.put(0x8E, new Opcode(0x8E, "ADC A,(HL)", 1));
-        table.put(0x8F, new Opcode(0x8F, "ADC A,A", 1));
-        table.put(0x90, new Opcode(0x90, "SUB A,B", 1));
-        table.put(0x91, new Opcode(0x91, "SUB A,C", 1));
-        table.put(0x92, new Opcode(0x92, "SUB A,D", 1));
-        table.put(0x93, new Opcode(0x93, "SUB A,E", 1));
-        table.put(0x94, new Opcode(0x94, "SUB A,H", 1));
-        table.put(0x95, new Opcode(0x95, "SUB A,L", 1));
-        table.put(0x96, new Opcode(0x96, "SUB A,(HL)", 1));
-        table.put(0x97, new Opcode(0x97, "SUB A,A", 1));
-        table.put(0x98, new Opcode(0x98, "SBC A,B", 1));
-        table.put(0x99, new Opcode(0x99, "SBC A,C", 1));
-        table.put(0x9A, new Opcode(0x9A, "SBC A,D", 1));
-        table.put(0x9B, new Opcode(0x9B, "SBC A,E", 1));
-        table.put(0x9C, new Opcode(0x9C, "SBC A,H", 1));
-        table.put(0x9D, new Opcode(0x9D, "SBC A,L", 1));
-        table.put(0x9E, new Opcode(0x9E, "SBC A,(HL)", 1));
-        table.put(0x9F, new Opcode(0x9F, "SBC A,A", 1));
-        table.put(0xA0, new Opcode(0xA0, "AND A,B", 1));
-        table.put(0xA1, new Opcode(0xA1, "AND A,C", 1));
-        table.put(0xA2, new Opcode(0xA2, "AND A,D", 1));
-        table.put(0xA3, new Opcode(0xA3, "AND A,E", 1));
-        table.put(0xA4, new Opcode(0xA4, "AND A,H", 1));
-        table.put(0xA5, new Opcode(0xA5, "AND A,L", 1));
-        table.put(0xA6, new Opcode(0xA6, "AND A,(HL)", 1));
-        table.put(0xA7, new Opcode(0xA7, "AND A,A", 1));
-        table.put(0xA8, new Opcode(0xA8, "XOR A,B", 1));
-        table.put(0xA9, new Opcode(0xA9, "XOR A,C", 1));
-        table.put(0xAA, new Opcode(0xAA, "XOR A,D", 1));
-        table.put(0xAB, new Opcode(0xAB, "XOR A,E", 1));
-        table.put(0xAC, new Opcode(0xAC, "XOR A,H", 1));
-        table.put(0xAD, new Opcode(0xAD, "XOR A,L", 1));
-        table.put(0xAE, new Opcode(0xAE, "XOR A,(HL)", 1));
-        table.put(0xAF, new Opcode(0xAF, "XOR A,A", 1));
-        table.put(0xB0, new Opcode(0xB0, "OR A,B", 1));
-        table.put(0xB1, new Opcode(0xB1, "OR A,C", 1));
-        table.put(0xB2, new Opcode(0xB2, "OR A,D", 1));
-        table.put(0xB3, new Opcode(0xB3, "OR A,E", 1));
-        table.put(0xB4, new Opcode(0xB4, "OR A,H", 1));
-        table.put(0xB5, new Opcode(0xB5, "OR A,L", 1));
-        table.put(0xB6, new Opcode(0xB6, "OR A,(HL)", 1));
-        table.put(0xB7, new Opcode(0xB7, "OR A,A", 1));
-        table.put(0xB8, new Opcode(0xB8, "CP A,B", 1));
-        table.put(0xB9, new Opcode(0xB9, "CP A,C", 1));
-        table.put(0xBA, new Opcode(0xBA, "CP A,D", 1));
-        table.put(0xBB, new Opcode(0xBB, "CP A,E", 1));
-        table.put(0xBC, new Opcode(0xBC, "CP A,H", 1));
-        table.put(0xBD, new Opcode(0xBD, "CP A,L", 1));
-        table.put(0xBE, new Opcode(0xBE, "CP A,(HL)", 1));
-        table.put(0xBF, new Opcode(0xBF, "CP A,A", 1));
+        table.put(0x40, new Opcode(0x40, "LD B,B", 1, new Runnable[]{() -> cpu.setB(cpu.getB())}));
+        table.put(0x41, new Opcode(0x41, "LD B,C", 1, new Runnable[]{() -> cpu.setB(cpu.getC())}));
+        table.put(0x42, new Opcode(0x42, "LD B,D", 1, new Runnable[]{() -> cpu.setB(cpu.getD())}));
+        table.put(0x43, new Opcode(0x43, "LD B,E", 1, new Runnable[]{() -> cpu.setB(cpu.getE())}));
+        table.put(0x44, new Opcode(0x44, "LD B,H", 1, new Runnable[]{() -> cpu.setB(cpu.getH())}));
+        table.put(0x45, new Opcode(0x45, "LD B,L", 1, new Runnable[]{() -> cpu.setB(cpu.getL())}));
+        table.put(0x46, new Opcode(0x46, "LD B,(HL)", 1, new Runnable[]{() -> cpu.setB(bus.readByte(cpu.getHL()))}));
+        table.put(0x47, new Opcode(0x47, "LD B,A", 1, new Runnable[]{() -> cpu.setA(cpu.getC())}));
+        table.put(0x48, new Opcode(0x48, "LD C,B", 1, new Runnable[]{() -> cpu.setC(cpu.getB())}));
+        table.put(0x49, new Opcode(0x49, "LD C,C", 1, new Runnable[]{() -> cpu.setC(cpu.getC())}));
+        table.put(0x4A, new Opcode(0x4A, "LD C,D", 1, new Runnable[]{() -> cpu.setC(cpu.getD())}));
+        table.put(0x4B, new Opcode(0x4B, "LD C,E", 1, new Runnable[]{() -> cpu.setC(cpu.getE())}));
+        table.put(0x4C, new Opcode(0x4C, "LD C,H", 1, new Runnable[]{() -> cpu.setC(cpu.getH())}));
+        table.put(0x4D, new Opcode(0x4D, "LD C,L", 1, new Runnable[]{() -> cpu.setC(cpu.getL())}));
+        table.put(0x4E, new Opcode(0x4E, "LD C,(HL)", 1, new Runnable[]{() -> cpu.setC(bus.readByte(cpu.getHL()))}));
+        table.put(0x4F, new Opcode(0x4F, "LD C,A", 1, new Runnable[]{() -> cpu.setC(cpu.getA())}));
+        table.put(0x50, new Opcode(0x50, "LD D,B", 1, new Runnable[]{() -> cpu.setD(cpu.getB())}));
+        table.put(0x51, new Opcode(0x51, "LD D,C", 1, new Runnable[]{() -> cpu.setD(cpu.getC())}));
+        table.put(0x52, new Opcode(0x52, "LD D,D", 1, new Runnable[]{() -> cpu.setD(cpu.getD())}));
+        table.put(0x53, new Opcode(0x53, "LD D,E", 1, new Runnable[]{() -> cpu.setD(cpu.getE())}));
+        table.put(0x54, new Opcode(0x54, "LD D,H", 1, new Runnable[]{() -> cpu.setD(cpu.getH())}));
+        table.put(0x55, new Opcode(0x55, "LD D,L", 1, new Runnable[]{() -> cpu.setD(cpu.getL())}));
+        table.put(0x56, new Opcode(0x56, "LD D,(HL)", 1, new Runnable[]{() -> cpu.setD(bus.readByte(cpu.getHL()))}));
+        table.put(0x57, new Opcode(0x57, "LD D,A", 1, new Runnable[]{() -> cpu.setD(cpu.getA())}));
+        table.put(0x58, new Opcode(0x58, "LD E,B", 1, new Runnable[]{() -> cpu.setE(cpu.getB())}));
+        table.put(0x59, new Opcode(0x59, "LD E,C", 1, new Runnable[]{() -> cpu.setE(cpu.getC())}));
+        table.put(0x5A, new Opcode(0x5A, "LD E,D", 1, new Runnable[]{() -> cpu.setE(cpu.getD())}));
+        table.put(0x5B, new Opcode(0x5B, "LD E,E", 1, new Runnable[]{() -> cpu.setE(cpu.getE())}));
+        table.put(0x5C, new Opcode(0x5C, "LD E,H", 1, new Runnable[]{() -> cpu.setE(cpu.getH())}));
+        table.put(0x5D, new Opcode(0x5D, "LD E,L", 1, new Runnable[]{() -> cpu.setE(cpu.getL())}));
+        table.put(0x5E, new Opcode(0x5E, "LD E,(HL)", 1, new Runnable[]{() -> cpu.setE(bus.readByte(cpu.getHL()))}));
+        table.put(0x5F, new Opcode(0x5F, "LD E,A", 1, new Runnable[]{() -> cpu.setE(cpu.getA())}));
+        table.put(0x60, new Opcode(0x60, "LD H,B", 1, new Runnable[]{() -> cpu.setH(cpu.getB())}));
+        table.put(0x61, new Opcode(0x61, "LD H,C", 1, new Runnable[]{() -> cpu.setH(cpu.getC())}));
+        table.put(0x62, new Opcode(0x62, "LD H,D", 1, new Runnable[]{() -> cpu.setH(cpu.getD())}));
+        table.put(0x63, new Opcode(0x63, "LD H,E", 1, new Runnable[]{() -> cpu.setH(cpu.getE())}));
+        table.put(0x64, new Opcode(0x64, "LD H,H", 1, new Runnable[]{() -> cpu.setH(cpu.getH())}));
+        table.put(0x65, new Opcode(0x65, "LD H,L", 1, new Runnable[]{() -> cpu.setH(cpu.getL())}));
+        table.put(0x66, new Opcode(0x66, "LD H,(HL)", 1, new Runnable[]{() -> cpu.setH(bus.readByte(cpu.getHL()))}));
+        table.put(0x67, new Opcode(0x67, "LD H,A", 1, new Runnable[]{() -> cpu.setH(cpu.getA())}));
+        table.put(0x68, new Opcode(0x68, "LD L,B", 1, new Runnable[]{() -> cpu.setL(cpu.getB())}));
+        table.put(0x69, new Opcode(0x69, "LD L,C", 1, new Runnable[]{() -> cpu.setL(cpu.getC())}));
+        table.put(0x6A, new Opcode(0x6A, "LD L,D", 1, new Runnable[]{() -> cpu.setL(cpu.getD())}));
+        table.put(0x6B, new Opcode(0x6B, "LD L,E", 1, new Runnable[]{() -> cpu.setL(cpu.getE())}));
+        table.put(0x6C, new Opcode(0x6C, "LD L,H", 1, new Runnable[]{() -> cpu.setL(cpu.getH())}));
+        table.put(0x6D, new Opcode(0x6D, "LD L,L", 1, new Runnable[]{() -> cpu.setL(cpu.getL())}));
+        table.put(0x6E, new Opcode(0x6E, "LD L,(HL)", 1, new Runnable[]{() -> cpu.setL(bus.readByte(cpu.getHL()))}));
+        table.put(0x6F, new Opcode(0x6F, "LD L,A", 1, new Runnable[]{() -> cpu.setL(cpu.getA())}));
+        table.put(0x70, new Opcode(0x70, "LD (HL),B", 1, new Runnable[]{() -> bus.writeByte(cpu.getHL(), cpu.getB())}));
+        table.put(0x71, new Opcode(0x71, "LD (HL),C", 1, new Runnable[]{() -> bus.writeByte(cpu.getHL(), cpu.getC())}));
+        table.put(0x72, new Opcode(0x72, "LD (HL),D", 1, new Runnable[]{() -> bus.writeByte(cpu.getHL(), cpu.getD())}));
+        table.put(0x73, new Opcode(0x73, "LD (HL),E", 1, new Runnable[]{() -> bus.writeByte(cpu.getHL(), cpu.getE())}));
+        table.put(0x74, new Opcode(0x74, "LD (HL),H", 1, new Runnable[]{() -> bus.writeByte(cpu.getHL(), cpu.getH())}));
+        table.put(0x75, new Opcode(0x75, "LD (HL),L", 1, new Runnable[]{() -> bus.writeByte(cpu.getHL(), cpu.getL())}));
+        table.put(0x76, new Opcode(0x76, "HALT", 1, new Runnable[]{}));
+        table.put(0x77, new Opcode(0x77, "LD (HL),A", 1, new Runnable[]{() -> bus.writeByte(cpu.getHL(), cpu.getA())}));
+        table.put(0x78, new Opcode(0x78, "LD A,B", 1, new Runnable[]{() -> cpu.setA(cpu.getB())}));
+        table.put(0x79, new Opcode(0x79, "LD A,C", 1, new Runnable[]{() -> cpu.setA(cpu.getC())}));
+        table.put(0x7A, new Opcode(0x7A, "LD A,D", 1, new Runnable[]{() -> cpu.setA(cpu.getD())}));
+        table.put(0x7B, new Opcode(0x7B, "LD A,E", 1, new Runnable[]{() -> cpu.setA(cpu.getE())}));
+        table.put(0x7C, new Opcode(0x7C, "LD A,H", 1, new Runnable[]{() -> cpu.setA(cpu.getH())}));
+        table.put(0x7D, new Opcode(0x7D, "LD A,L", 1, new Runnable[]{() -> cpu.setA(cpu.getL())}));
+        table.put(0x7E, new Opcode(0x7E, "LD A,(HL)", 1, new Runnable[]{() -> cpu.setA(bus.readByte(cpu.getHL()))}));
+        table.put(0x7F, new Opcode(0x7F, "LD A,A", 1, new Runnable[]{() -> cpu.setA(cpu.getA())}));
+        table.put(0x80, new Opcode(0x80, "ADD A,B", 1, new Runnable[]{() -> ADD(cpu.getB())}));
+        table.put(0x81, new Opcode(0x81, "ADD A,C", 1, new Runnable[]{() -> ADD(cpu.getC())}));
+        table.put(0x82, new Opcode(0x82, "ADD A,D", 1, new Runnable[]{() -> ADD(cpu.getD())}));
+        table.put(0x83, new Opcode(0x83, "ADD A,E", 1, new Runnable[]{() -> ADD(cpu.getE())}));
+        table.put(0x84, new Opcode(0x84, "ADD A,H", 1, new Runnable[]{() -> ADD(cpu.getH())}));
+        table.put(0x85, new Opcode(0x85, "ADD A,L", 1, new Runnable[]{() -> ADD(cpu.getL())}));
+        table.put(0x86, new Opcode(0x86, "ADD A,(HL)", 1, new Runnable[]{() -> ADD(bus.readByte(cpu.getHL()))}));
+        table.put(0x87, new Opcode(0x87, "ADD A,A", 1, new Runnable[]{() -> ADD(cpu.getA())}));
+        table.put(0x88, new Opcode(0x88, "ADC A,B", 1, new Runnable[]{() -> ADC(cpu.getB())}));
+        table.put(0x89, new Opcode(0x89, "ADC A,C", 1, new Runnable[]{() -> ADC(cpu.getC())}));
+        table.put(0x8A, new Opcode(0x8A, "ADC A,D", 1, new Runnable[]{() -> ADC(cpu.getD())}));
+        table.put(0x8B, new Opcode(0x8B, "ADC A,E", 1, new Runnable[]{() -> ADC(cpu.getE())}));
+        table.put(0x8C, new Opcode(0x8C, "ADC A,H", 1, new Runnable[]{() -> ADC(cpu.getH())}));
+        table.put(0x8D, new Opcode(0x8D, "ADC A,L", 1, new Runnable[]{() -> ADC(cpu.getL())}));
+        table.put(0x8E, new Opcode(0x8E, "ADC A,(HL)", 1, new Runnable[]{() -> ADC(bus.readByte(cpu.getHL()))}));
+        table.put(0x8F, new Opcode(0x8F, "ADC A,A", 1, new Runnable[]{() -> ADC(cpu.getA())}));
+        table.put(0x90, new Opcode(0x90, "SUB A,B", 1, new Runnable[]{() -> SUB(cpu.getB())}));
+        table.put(0x91, new Opcode(0x91, "SUB A,C", 1, new Runnable[]{() -> SUB(cpu.getC())}));
+        table.put(0x92, new Opcode(0x92, "SUB A,D", 1, new Runnable[]{() -> SUB(cpu.getD())}));
+        table.put(0x93, new Opcode(0x93, "SUB A,E", 1, new Runnable[]{() -> SUB(cpu.getE())}));
+        table.put(0x94, new Opcode(0x94, "SUB A,H", 1, new Runnable[]{() -> SUB(cpu.getH())}));
+        table.put(0x95, new Opcode(0x95, "SUB A,L", 1, new Runnable[]{() -> SUB(cpu.getL())}));
+        table.put(0x96, new Opcode(0x96, "SUB A,(HL)", 1, new Runnable[]{() -> SUB(bus.readByte(cpu.getHL()))}));
+        table.put(0x97, new Opcode(0x97, "SUB A,A", 1, new Runnable[]{() -> SUB(cpu.getA())}));
+        table.put(0x98, new Opcode(0x98, "SBC A,B", 1, new Runnable[]{() -> SBC(cpu.getB())}));
+        table.put(0x99, new Opcode(0x99, "SBC A,C", 1, new Runnable[]{() -> SBC(cpu.getC())}));
+        table.put(0x9A, new Opcode(0x9A, "SBC A,D", 1, new Runnable[]{() -> SBC(cpu.getD())}));
+        table.put(0x9B, new Opcode(0x9B, "SBC A,E", 1, new Runnable[]{() -> SBC(cpu.getE())}));
+        table.put(0x9C, new Opcode(0x9C, "SBC A,H", 1, new Runnable[]{() -> SBC(cpu.getH())}));
+        table.put(0x9D, new Opcode(0x9D, "SBC A,L", 1, new Runnable[]{() -> SBC(cpu.getL())}));
+        table.put(0x9E, new Opcode(0x9E, "SBC A,(HL)", 1, new Runnable[]{() -> SBC(bus.readByte(cpu.getHL()))}));
+        table.put(0x9F, new Opcode(0x9F, "SBC A,A", 1, new Runnable[]{() -> SBC(cpu.getA())}));
+        table.put(0xA0, new Opcode(0xA0, "AND A,B", 1, new Runnable[]{() -> AND(cpu.getB())}));
+        table.put(0xA1, new Opcode(0xA1, "AND A,C", 1, new Runnable[]{() -> AND(cpu.getC())}));
+        table.put(0xA2, new Opcode(0xA2, "AND A,D", 1, new Runnable[]{() -> AND(cpu.getD())}));
+        table.put(0xA3, new Opcode(0xA3, "AND A,E", 1, new Runnable[]{() -> AND(cpu.getE())}));
+        table.put(0xA4, new Opcode(0xA4, "AND A,H", 1, new Runnable[]{() -> AND(cpu.getH())}));
+        table.put(0xA5, new Opcode(0xA5, "AND A,L", 1, new Runnable[]{() -> AND(cpu.getL())}));
+        table.put(0xA6, new Opcode(0xA6, "AND A,(HL)", 1, new Runnable[]{() -> AND(bus.readByte(cpu.getHL()))}));
+        table.put(0xA7, new Opcode(0xA7, "AND A,A", 1, new Runnable[]{() -> AND(cpu.getA())}));
+        table.put(0xA8, new Opcode(0xA8, "XOR A,B", 1, new Runnable[]{() -> XOR(cpu.getB())}));
+        table.put(0xA9, new Opcode(0xA9, "XOR A,C", 1, new Runnable[]{() -> XOR(cpu.getC())}));
+        table.put(0xAA, new Opcode(0xAA, "XOR A,D", 1, new Runnable[]{() -> XOR(cpu.getD())}));
+        table.put(0xAB, new Opcode(0xAB, "XOR A,E", 1, new Runnable[]{() -> XOR(cpu.getE())}));
+        table.put(0xAC, new Opcode(0xAC, "XOR A,H", 1, new Runnable[]{() -> XOR(cpu.getH())}));
+        table.put(0xAD, new Opcode(0xAD, "XOR A,L", 1, new Runnable[]{() -> XOR(cpu.getL())}));
+        table.put(0xAE, new Opcode(0xAE, "XOR A,(HL)", 1, new Runnable[]{() -> XOR(bus.readByte(cpu.getHL()))}));
+        table.put(0xAF, new Opcode(0xAF, "XOR A,A", 1, new Runnable[]{() -> XOR(cpu.getA())}));
+        table.put(0xB0, new Opcode(0xB0, "OR A,B", 1, new Runnable[]{() -> OR(cpu.getB())}));
+        table.put(0xB1, new Opcode(0xB1, "OR A,C", 1, new Runnable[]{() -> OR(cpu.getC())}));
+        table.put(0xB2, new Opcode(0xB2, "OR A,D", 1, new Runnable[]{() -> OR(cpu.getD())}));
+        table.put(0xB3, new Opcode(0xB3, "OR A,E", 1, new Runnable[]{() -> OR(cpu.getE())}));
+        table.put(0xB4, new Opcode(0xB4, "OR A,H", 1, new Runnable[]{() -> OR(cpu.getH())}));
+        table.put(0xB5, new Opcode(0xB5, "OR A,L", 1, new Runnable[]{() -> OR(cpu.getL())}));
+        table.put(0xB6, new Opcode(0xB6, "OR A,(HL)", 1, new Runnable[]{() -> OR(bus.readByte(cpu.getHL()))}));
+        table.put(0xB7, new Opcode(0xB7, "OR A,A", 1, new Runnable[]{() -> OR(cpu.getA())}));
+        table.put(0xB8, new Opcode(0xB8, "CP A,B", 1, new Runnable[]{() -> CP(cpu.getB())}));
+        table.put(0xB9, new Opcode(0xB9, "CP A,C", 1, new Runnable[]{() -> CP(cpu.getC())}));
+        table.put(0xBA, new Opcode(0xBA, "CP A,D", 1, new Runnable[]{() -> CP(cpu.getD())}));
+        table.put(0xBB, new Opcode(0xBB, "CP A,E", 1, new Runnable[]{() -> CP(cpu.getE())}));
+        table.put(0xBC, new Opcode(0xBC, "CP A,H", 1, new Runnable[]{() -> CP(cpu.getH())}));
+        table.put(0xBD, new Opcode(0xBD, "CP A,L", 1, new Runnable[]{() -> CP(cpu.getL())}));
+        table.put(0xBE, new Opcode(0xBE, "CP A,(HL)", 1, new Runnable[]{() -> CP(bus.readByte(cpu.getHL()))}));
+        table.put(0xBF, new Opcode(0xBF, "CP A,A", 1, new Runnable[]{() -> CP(cpu.getA())}));
         table.put(0xC0, new Opcode(0xC0, "RET NZ", 1));
         table.put(0xC1, new Opcode(0xC1, "POP BC", 1));
         table.put(0xC2, new Opcode(0xC2, "JP NZ,u16", 3));
         table.put(0xC3, new Opcode(0xC3, "JP u16", 3));
         table.put(0xC4, new Opcode(0xC4, "CALL NZ,u16", 3));
         table.put(0xC5, new Opcode(0xC5, "PUSH BC", 1));
-        table.put(0xC6, new Opcode(0xC6, "ADD A,u8", 2));
+        table.put(0xC6, new Opcode(0xC6, "ADD A,u8", 2, new Runnable[]{() -> ADD(bus.readByte(cpu.getPCInc()))}));
         table.put(0xC7, new Opcode(0xC7, "RST 00h", 1));
         table.put(0xC8, new Opcode(0xC8, "RET Z", 1));
         table.put(0xC9, new Opcode(0xC9, "RET", 1));
         table.put(0xCA, new Opcode(0xCA, "JP Z,u16", 3));
-        table.put(0xCB, new Opcode(0xCB, "PREFIX CB", 1));
+        table.put(0xCB, new Opcode(0xCB, "PREFIX CB", 1, new Runnable[]{}));
         table.put(0xCC, new Opcode(0xCC, "CALL Z,u16", 3));
         table.put(0xCD, new Opcode(0xCD, "CALL u16", 3));
-        table.put(0xCE, new Opcode(0xCE, "ADC A,u8", 2));
+        table.put(0xCE, new Opcode(0xCE, "ADC A,u8", 2, new Runnable[]{() -> ADC(bus.readByte(cpu.getPCInc()))}));
         table.put(0xCF, new Opcode(0xCF, "RST 08h", 1));
         table.put(0xD0, new Opcode(0xD0, "RET NC", 1));
         table.put(0xD1, new Opcode(0xD1, "POP DE", 1));
         table.put(0xD2, new Opcode(0xD2, "JP NC,u16", 3));
-        table.put(0xD3, new Opcode(0xD3, "UNUSED", 1));
+        table.put(0xD3, new Opcode(0xD3, "UNUSED", 1, new Runnable[]{}));
         table.put(0xD4, new Opcode(0xD4, "CALL NC,u16", 3));
         table.put(0xD5, new Opcode(0xD5, "PUSH DE", 1));
-        table.put(0xD6, new Opcode(0xD6, "SUB A,u8", 2));
+        table.put(0xD6, new Opcode(0xD6, "SUB A,u8", 2, new Runnable[]{() -> SUB(bus.readByte(cpu.getPCInc()))}));
         table.put(0xD7, new Opcode(0xD7, "RST 10h", 1));
         table.put(0xD8, new Opcode(0xD8, "RET C", 1));
         table.put(0xD9, new Opcode(0xD9, "RETI", 1));
         table.put(0xDA, new Opcode(0xDA, "JP C,u16", 3));
-        table.put(0xDB, new Opcode(0xDB, "UNUSED", 1));
+        table.put(0xDB, new Opcode(0xDB, "UNUSED", 1, new Runnable[]{}));
         table.put(0xDC, new Opcode(0xDC, "CALL C,u16", 3));
-        table.put(0xDD, new Opcode(0xDD, "UNUSED", 1));
+        table.put(0xDD, new Opcode(0xDD, "UNUSED", 1, new Runnable[]{}));
         table.put(0xDE, new Opcode(0xDE, "SBC A,u8", 2));
         table.put(0xDF, new Opcode(0xDF, "RST 18h", 1));
         table.put(0xE0, new Opcode(0xE0, "LD (FF00+u8),A", 2));
         table.put(0xE1, new Opcode(0xE1, "POP HL", 1));
         table.put(0xE2, new Opcode(0xE2, "LD (FF00+C),A", 1));
-        table.put(0xE3, new Opcode(0xE3, "UNUSED", 1));
-        table.put(0xE4, new Opcode(0xE4, "UNUSED", 1));
+        table.put(0xE3, new Opcode(0xE3, "UNUSED", 1, new Runnable[]{}));
+        table.put(0xE4, new Opcode(0xE4, "UNUSED", 1, new Runnable[]{}));
         table.put(0xE5, new Opcode(0xE5, "PUSH HL", 1));
-        table.put(0xE6, new Opcode(0xE6, "AND A,u8", 2));
+        table.put(0xE6, new Opcode(0xE6, "AND A,u8", 2, new Runnable[]{() -> AND(bus.readByte(cpu.getPCInc()))}));
         table.put(0xE7, new Opcode(0xE7, "RST 20h", 1));
         table.put(0xE8, new Opcode(0xE8, "ADD SP,i8", 2));
         table.put(0xE9, new Opcode(0xE9, "JP HL", 1));
         table.put(0xEA, new Opcode(0xEA, "LD (u16),A", 3));
-        table.put(0xEB, new Opcode(0xEB, "UNUSED", 1));
-        table.put(0xEC, new Opcode(0xEC, "UNUSED", 1));
-        table.put(0xED, new Opcode(0xED, "UNUSED", 1));
-        table.put(0xEE, new Opcode(0xEE, "XOR A,u8", 2));
+        table.put(0xEB, new Opcode(0xEB, "UNUSED", 1, new Runnable[]{}));
+        table.put(0xEC, new Opcode(0xEC, "UNUSED", 1, new Runnable[]{}));
+        table.put(0xED, new Opcode(0xED, "UNUSED", 1, new Runnable[]{}));
+        table.put(0xEE, new Opcode(0xEE, "XOR A,u8", 2, new Runnable[]{() -> XOR(bus.readByte(cpu.getPCInc()))}));
         table.put(0xEF, new Opcode(0xEF, "RST 28h", 1));
         table.put(0xF0, new Opcode(0xF0, "LD A,(FF00+u8)", 2));
         table.put(0xF1, new Opcode(0xF1, "POP AF", 1));
         table.put(0xF2, new Opcode(0xF2, "LD A,(FF00+C)", 1));
         table.put(0xF3, new Opcode(0xF3, "DI", 1));
-        table.put(0xF4, new Opcode(0xF4, "UNUSED", 1));
+        table.put(0xF4, new Opcode(0xF4, "UNUSED", 1, new Runnable[]{}));
         table.put(0xF5, new Opcode(0xF5, "PUSH AF", 1));
-        table.put(0xF6, new Opcode(0xF6, "OR A,u8", 2));
+        table.put(0xF6, new Opcode(0xF6, "OR A,u8", 2, new Runnable[]{() -> OR(bus.readByte(cpu.getPCInc()))}));
         table.put(0xF7, new Opcode(0xF7, "RST 30h", 1));
         table.put(0xF8, new Opcode(0xF8, "LD HL,SP+i8", 2));
         table.put(0xF9, new Opcode(0xF9, "LD SP,HL", 1));
         table.put(0xFA, new Opcode(0xFA, "LD A,(u16)", 3));
         table.put(0xFB, new Opcode(0xFB, "EI", 1));
-        table.put(0xFC, new Opcode(0xFC, "UNUSED", 1));
-        table.put(0xFD, new Opcode(0xFD, "UNUSED", 1));
-        table.put(0xFE, new Opcode(0xFE, "CP A,u8", 2));
+        table.put(0xFC, new Opcode(0xFC, "UNUSED", 1, new Runnable[]{}));
+        table.put(0xFD, new Opcode(0xFD, "UNUSED", 1, new Runnable[]{}));
+        table.put(0xFE, new Opcode(0xFE, "CP A,u8", 2, new Runnable[]{() -> CP(bus.readByte(cpu.getPCInc()))}));
         table.put(0xFF, new Opcode(0xFF, "RST 38h", 1));
 
         return table;
@@ -532,5 +562,97 @@ public class OpcodeTable {
         table.put(0xFF, new Opcode(0xFF, "SET 7,A", 2));
 
         return table;
+    }
+
+    private static int INC(int value) {
+        int result = value + 1;
+        cpu.setZeroFlag(result == 0 ? 1 : 0);
+        cpu.setSubtractionFlag(0);
+        cpu.setHalfCarryFlag((value & 0b00001111) == 0b00001111 ? 1 : 0);
+
+        return result;
+    }
+
+    private static int DEC(int value) {
+        int result = value - 1;
+        cpu.setZeroFlag(result == 0 ? 1 : 0);
+        cpu.setSubtractionFlag(1);
+        cpu.setHalfCarryFlag((value & 0b00001111) == 0b00000000 ? 1 : 0);
+
+        return result;
+    }
+
+    private static void ADD(int value) {
+        int result = cpu.getA() + value;
+        cpu.setZeroFlag(result == 0 ? 1 : 0);
+        cpu.setSubtractionFlag(0);
+        cpu.setHalfCarryFlag((cpu.getA() & 0b00001111) + (value & 0b00001111) > 0b00001111 ? 1 : 0);
+        cpu.setCarryFlag(hasCarry(result) ? 1 : 0);
+        cpu.setA(result);
+    }
+
+    private static void ADC(int value) {
+        int carry = cpu.getCarryFlag();
+        int result = (cpu.getA() + value + carry) & 0b11111111;
+        cpu.setZeroFlag(result == 0 ? 1 : 0);
+        cpu.setSubtractionFlag(0);
+        cpu.setHalfCarryFlag((cpu.getA() & 0b00001111) + (value & 0b00001111) + carry > 0b00001111 ? 1 : 0);
+        cpu.setCarryFlag(hasCarry(cpu.getA() + value + carry) ? 1 : 0);
+        cpu.setA(result);
+    }
+
+    private static void SUB(int value) {
+        int result = cpu.getA() - value;
+        cpu.setZeroFlag(result == 0 ? 1 : 0);
+        cpu.setSubtractionFlag(1);
+        cpu.setHalfCarryFlag((value & 0b00001111) > (cpu.getA() & 0b00001111) ? 1 : 0);
+        cpu.setCarryFlag(hasCarry(result) ? 1 : 0);
+        cpu.setA(result);
+    }
+
+    private static void SBC(int value) {
+        int carry = cpu.getCarryFlag();
+        int result = cpu.getA() - value - carry;
+        cpu.setZeroFlag((result & 0b11111111) == 0 ? 1 : 0);
+        cpu.setSubtractionFlag(1);
+        cpu.setHalfCarryFlag(((cpu.getA() ^ value ^ (result & 0b11111111)) & (1 << 4)) != 0 ? 1 : 0);
+        cpu.setCarryFlag(result < 0 ? 1 : 0);
+        cpu.setA(result);
+    }
+
+    private static void AND(int value) {
+        cpu.setA(cpu.getA() & value);
+        cpu.setZeroFlag(cpu.getA() == 0 ? 1 : 0);
+        cpu.setSubtractionFlag(0);
+        cpu.setHalfCarryFlag(1);
+        cpu.setCarryFlag(0);
+    }
+
+    private static void XOR(int value) {
+        cpu.setA(cpu.getA() ^ value);
+        cpu.setZeroFlag(cpu.getA() == 0 ? 1 : 0);
+        cpu.setSubtractionFlag(0);
+        cpu.setHalfCarryFlag(0);
+        cpu.setCarryFlag(0);
+    }
+
+    private static void OR(int value) {
+        cpu.setA(cpu.getA() | value);
+        cpu.setZeroFlag(cpu.getA() == 0 ? 1 : 0);
+        cpu.setSubtractionFlag(0);
+        cpu.setHalfCarryFlag(0);
+        cpu.setCarryFlag(0);
+    }
+
+    private static void CP(int value) {
+        int result = cpu.getA() - value;
+        cpu.setZeroFlag(result == 0 ? 1 : 0);
+        cpu.setSubtractionFlag(1);
+        cpu.setHalfCarryFlag((0b00001111 & value) > (0b00001111 & cpu.getA()) ? 1 : 0);
+        cpu.setCarryFlag(hasCarry(result) ? 1 : 0);
+    }
+
+    private static boolean hasCarry(int value) {
+        return (value >> 8) != 0;
     }
 }
