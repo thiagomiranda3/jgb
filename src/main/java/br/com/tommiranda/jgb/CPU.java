@@ -2,10 +2,14 @@ package br.com.tommiranda.jgb;
 
 public class CPU {
 
-    private int AF;
-    private int BC;
-    private int DE;
-    private int HL;
+    private int A;
+    private int F;
+    private int B;
+    private int C;
+    private int D;
+    private int E;
+    private int H;
+    private int L;
     private int SP;
     private int PC;
 
@@ -13,132 +17,112 @@ public class CPU {
     }
 
     public CPU(int AF, int BC, int DE, int HL, int SP, int PC) {
-        this.AF = AF;
-        this.BC = BC;
-        this.DE = DE;
-        this.HL = HL;
+        this.A = (AF >> 8) & 0xFF;
+        this.F = AF & 0xFF;
+        this.B = (BC >> 8) & 0xFF;
+        this.C = BC & 0xFF;
+        this.D = (DE >> 8) & 0xFF;
+        this.E = DE & 0xFF;
+        this.H = (HL >> 8) & 0xFF;
+        this.L = HL & 0xFF;
         this.SP = SP;
         this.PC = PC;
     }
 
     public int getZeroFlag() {
-        return (AF >> 7) & 0x01;
+        return (F >> 7) & 0x01;
     }
 
     public void setZeroFlag(int zeroFlag) {
-        AF |= (zeroFlag & 0b10000000);
+        F |= (zeroFlag & 0b10000000);
     }
 
     public int getSubtractionFlag() {
-        return (AF >> 6) & 0x01;
+        return (F >> 6) & 0x01;
     }
 
     public void setSubtractionFlag(int subtractionFlag) {
-        AF |= (subtractionFlag & 0b01000000);
+        F |= (subtractionFlag & 0b01000000);
     }
 
     public int getHalfCarryFlag() {
-        return (AF >> 5) & 0x01;
+        return (F >> 5) & 0x01;
     }
 
     public void setHalfCarryFlag(int halfCarryFlag) {
-        AF |= (halfCarryFlag & 0b00100000);
+        F |= (halfCarryFlag & 0b00100000);
     }
 
     public int getCarryFlag() {
-        return (AF >> 4) & 0x01;
+        return (F >> 4) & 0x01;
     }
 
     public void setCarryFlag(int carryFlag) {
-        AF |= (carryFlag & 0b00010000);
+        F |= (carryFlag & 0b00010000);
     }
 
     public int getA() {
-        return AF & 0xFF00;
+        return A;
     }
 
     public void setA(int A) {
-        AF |= 0xFF00 & A;
+        this.A = A;
+    }
+
+    public int getF() {
+        return F;
+    }
+
+    public void setF(int F) {
+        this.F = F;
     }
 
     public int getB() {
-        return BC & 0xFF00;
+        return B;
     }
 
     public void setB(int B) {
-        BC |= 0xFF00 & B;
+        this.B = B;
     }
 
     public int getC() {
-        return BC & 0xFF;
+        return C;
     }
 
     public void setC(int C) {
-        BC |= 0xFF & C;
+        this.C = C;
     }
 
     public int getD() {
-        return DE & 0xFF00;
+        return D;
     }
 
     public void setD(int D) {
-        DE |= 0xFF00 & D;
+        this.D = D;
     }
 
     public int getE() {
-        return DE & 0xFF;
+        return E;
     }
 
     public void setE(int E) {
-        DE |= 0xFF & E;
+        this.E = E;
     }
 
     public int getH() {
-        return HL & 0xFF00;
+        return H;
     }
 
     public void setH(int H) {
-        HL |= 0xFF00 & H;
+        this.H = H;
     }
 
     public int getL() {
-        return HL & 0xFF;
+        return L;
     }
 
     public void setL(int L) {
-        HL |= 0xFF & L;
-    }
-
-    public int getAF() {
-        return AF;
-    }
-
-    public void setAF(int AF) {
-        this.AF = AF;
-    }
-
-    public int getBC() {
-        return BC;
-    }
-
-    public void setBC(int BC) {
-        this.BC = BC;
-    }
-
-    public int getDE() {
-        return DE;
-    }
-
-    public void setDE(int DE) {
-        this.DE = DE;
-    }
-
-    public int getHL() {
-        return HL;
-    }
-
-    public void setHL(int HL) {
-        this.HL = HL;
+        this.L = L;
     }
 
     public int getSP() {
@@ -159,5 +143,26 @@ public class CPU {
 
     public void setPC(int PC) {
         this.PC = PC;
+    }
+
+    public void setHL(int HL) {
+        this.H = (HL >> 8) & 0xFF;
+        this.L = L & 0xFF;
+    }
+
+    public int getAF() {
+        return (A << 8) | F;
+    }
+
+    public int getBC() {
+        return (B << 8) | C;
+    }
+
+    public int getDE() {
+        return (D << 8) | E;
+    }
+
+    public int getHL() {
+        return (H << 8) | L;
     }
 }
